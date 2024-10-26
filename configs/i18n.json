@@ -1,0 +1,47 @@
+{
+    "en": {
+        "window_title": "AutoWatermark",
+        "images_path": "Images Path:",
+        "browse": "Browse",
+        "logo_path": "Logo Path:",
+        "output_directory": "Output Directory:",
+        "run": "Run",
+        "preview": "Preview",
+        "focal_length": "Focal Length",
+        "aperture": "Aperture",
+        "exposure_time": "Exposure Time",
+        "iso": "ISO",
+        "input_error": "Invalid input!",
+        "invalid_path": "Please provide a valid path!",
+        "no_device_title": "Device not found!",
+        "no_device": "Failed to auto-fetch logo path, please set it manually!",
+        "success_title": "Success!",
+        "success": "Watermark added successfully!",
+        "error_title": "Error!",
+        "logo_error": "Please provide valid image and logo paths!",
+        "exif_error": "Invalid image, auto-fetching information failed!"
+    },
+    "zh": {
+        "window_title": "自动水印",
+        "images_path": "图像路径:",
+        "browse": "浏览",
+        "logo_path": "Logo路径:",
+        "output_directory": "输出目录:",
+        "run": "运行",
+        "preview": "预览",
+        "focal_length": "焦距",
+        "aperture": "光圈",
+        "exposure_time": "曝光时间",
+        "iso": "ISO",
+        "input_error": "无效输入！",
+        "invalid_path": "请提供有效路径！",
+        "no_device_title": "Logo获取失败！",
+        "no_device": "自动获取Logo路径失败，请手动设置！",
+        "success_title": "成功！",
+        "success": "水印添加成功！",
+        "error_title": "错误！",
+        "logo_error": "请提供有效的图像路径和Logo路径！",
+        "exif_error": "无效图像，自动获取信息失败！"
+        
+    }
+}

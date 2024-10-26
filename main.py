@@ -1,66 +1,118 @@
+from utils.exif_utils import *
+from utils.image_utils import *
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLabel, QHBoxLayout, QScrollArea, QTableWidget, QTableWidgetItem
 from PIL import Image, ImageDraw, ImageFont
-from PyQt5.QtGui import QFont, QImage
+from PyQt5.QtGui import QFont, QFontDatabase
 
-import subprocess
-import piexif
 import os
+import json
 
-EDGE_WIDTH = 300
+EDGE_WIDTH = 400
 EDGE_WIDTH_SIDE = 150
 FONT_SIZE = 90
 
 IMAGE_SIZE = 6000 * 5000
+
+GLOBAL_FONT_PATH_BOLD = "./fonts/AlibabaPuHuiTi-2-85-Bold.otf"
+GLOBAL_FONT_PATH_LIGHT = "./fonts/Roboto-Regular.ttf"
+
+
 class ImageWatermarkApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+        
+        with open('configs/language.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+            self.current_language = config.get('language', 'zh')  # 默认语言为 'en'
+        
+        with open('configs/i18n.json', 'r', encoding='utf-8') as f:
+            self.translations = json.load(f)
+        
         self.init_ui()
 
     def init_ui(self):
         # 设置窗口标题和大小
-        self.setWindowTitle('Image Watermark App')
+        self.setWindowTitle(self.translations[self.current_language]['window_title'])
         self.setGeometry(100, 100, 1200, 800)
         self.setFixedSize(1500, 1000)
+    
 
         # 创建布局
         main_layout = QtWidgets.QHBoxLayout()
 
         # 左侧布局
         left_layout = QtWidgets.QVBoxLayout()
+        
+        bold_font_id = QFontDatabase.addApplicationFont(GLOBAL_FONT_PATH_BOLD)
+        light_font_id = QFontDatabase.addApplicationFont(GLOBAL_FONT_PATH_LIGHT)
+        bold_font_families = QFontDatabase.applicationFontFamilies(bold_font_id)
+        light_font_families = QFontDatabase.applicationFontFamilies(light_font_id)
+        bold_qfont = QFont(bold_font_families[0])
+        light_qfont = QFont(light_font_families[0]) 
+        bold_font = QFont(bold_qfont)
+        light_font  = QFont(light_qfont)
 
         # 创建按钮和标签
-        self.images_path_label = QtWidgets.QLabel('Images Path:')
+        self.images_path_label = QtWidgets.QLabel(self.translations[self.current_language]['images_path'])
         self.images_path_edit = QtWidgets.QLineEdit()
-        self.images_browse_button = QtWidgets.QPushButton('Browse')
-
-        self.logo_path_label = QtWidgets.QLabel('Logo Path:')
+        self.images_browse_button = QtWidgets.QPushButton(self.translations[self.current_language]['browse'])
+        
+        self.images_path_label.setFont(bold_font)
+        self.images_path_edit.setFont(light_font)
+        self.images_browse_button.setFont(light_font)
+        
+        self.logo_path_label = QtWidgets.QLabel(self.translations[self.current_language]['logo_path'])
         self.logo_path_edit = QtWidgets.QLineEdit()
-        self.logo_browse_button = QtWidgets.QPushButton('Browse')
+        self.logo_browse_button = QtWidgets.QPushButton(self.translations[self.current_language]['browse'])
+        
+        self.logo_path_label.setFont(bold_font)
+        self.logo_path_edit.setFont(light_font)
+        self.logo_browse_button.setFont(light_font)
 
-        self.output_dir_label = QtWidgets.QLabel('Output Directory:')
+        self.output_dir_label = QtWidgets.QLabel(self.translations[self.current_language]['output_directory'])
         self.output_dir_edit = QtWidgets.QLineEdit()
-        self.output_browse_button = QtWidgets.QPushButton('Browse')
+        self.output_browse_button = QtWidgets.QPushButton(self.translations[self.current_language]['browse'])
+        
+        self.output_dir_label.setFont(bold_font)
+        self.output_dir_edit.setFont(light_font)
+        self.output_browse_button.setFont(light_font)
 
-        self.run_button = QtWidgets.QPushButton('Run')
-        self.preview_button = QtWidgets.QPushButton('Preview')
+        self.run_button = QtWidgets.QPushButton(self.translations[self.current_language]['run'])
+        self.preview_button = QtWidgets.QPushButton(self.translations[self.current_language]['preview'])
+        
+        self.run_button.setFont(bold_font)
+        self.preview_button.setFont(bold_font)
 
-        button_layout = QHBoxLayout()
+        button_layout = QtWidgets.QHBoxLayout()
         button_layout.addWidget(self.run_button)
         button_layout.addWidget(self.preview_button)
 
         self.exif_info_table = QTableWidget(1, 4)
-        self.exif_info_table.setHorizontalHeaderLabels(['Focal Length', 'Aperture', 'Exposure Time', 'ISO'])
+        self.exif_info_table.setHorizontalHeaderLabels([
+            self.translations[self.current_language]['focal_length'],
+            self.translations[self.current_language]['aperture'],
+            self.translations[self.current_language]['exposure_time'],
+            self.translations[self.current_language]['iso']
+        ])
         self.exif_info_table.setFixedSize(600, 100)
         self.exif_info_table.horizontalHeader().setStretchLastSection(True)
+        self.exif_info_table.verticalHeader().setVisible(False)
         self.exif_info_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.exif_info_table.setStyleSheet("QHeaderView::section { background-color:lightgray }")
+        self.exif_info_table.setFont(bold_font)
+        
+        for i in range(self.exif_info_table.columnCount()):
+            self.exif_info_table.horizontalHeaderItem(i).setFont(bold_font)
 
-        font = QFont("Arial", 10, QFont.Bold)
-        self.exif_info_table.setFont(font)
+        # self.set_font(bold_font, self.images_path_label, self.images_path_edit, self.images_browse_button,
+        #       self.logo_path_label, self.logo_path_edit, self.logo_browse_button,
+        #       self.output_dir_label, self.output_dir_edit, self.output_browse_button,
+        #       self.run_button, self.preview_button, self.exif_info_table)
 
-        for i in range(4):
-            self.exif_info_table.horizontalHeaderItem(i).setFont(font)
+
 
         self.exif_info_table.setAlternatingRowColors(True)
         self.exif_info_table.setStyleSheet("""
@@ -111,9 +163,9 @@ class ImageWatermarkApp(QtWidgets.QWidget):
         self.selected_image_label.setAlignment(QtCore.Qt.AlignCenter)
         self.selected_image_label.setStyleSheet("border: 1px solid #ccc;")  # 可选的样式设置
         self.scroll_area_selected = QScrollArea()
-        self.scroll_area_selected .setWidget(self.selected_image_label)
-        self.scroll_area_selected .setWidgetResizable(True)
-        self.scroll_area_selected .setFixedSize(600, 400)
+        self.scroll_area_selected.setWidget(self.selected_image_label)
+        self.scroll_area_selected.setWidgetResizable(True)
+        self.scroll_area_selected.setFixedSize(600, 400)
 
         left_layout.addWidget(self.scroll_area_selected, stretch = 3)
         right_layout.addWidget(self.scroll_area, stretch = 3)
@@ -127,8 +179,7 @@ class ImageWatermarkApp(QtWidgets.QWidget):
         # 设置样式表
         self.setStyleSheet("""
             QWidget {
-                font-family: Arial, sans-serif;
-                font-size: 14px;
+                font-size: 16px;
             }
             QLineEdit {
                 border: 2px solid #ccc;
@@ -145,11 +196,11 @@ class ImageWatermarkApp(QtWidgets.QWidget):
                 font-size: 14px;
             }
             QPushButton:hover {
+                font-weight: light;
                 background-color: #45a049;
             }
             QLabel {
-                font-weight: bold;
-                font-size: 16px;
+                font-size: 18px;
             }
         """)
 
@@ -160,19 +211,50 @@ class ImageWatermarkApp(QtWidgets.QWidget):
         self.run_button.clicked.connect(self.run)
         self.preview_button.clicked.connect(self.preview)
 
+    def set_font(self, font, *widgets):
+        """设置多个控件的字体"""
+        for widget in widgets:
+            widget.setFont(font)
+    
+    def show_message_box(self, title, text, msg_type='information'):
+        bold_font_id = QFontDatabase.addApplicationFont(GLOBAL_FONT_PATH_BOLD)
+        bold_font_families = QFontDatabase.applicationFontFamilies(bold_font_id)
+        bold_qfont = QFont(bold_font_families[0])
+        bold_font = QFont(bold_qfont)
+        
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle(title)
+        msg_box.setText(text)
+        msg_box.setFont(bold_font)
+        if msg_type == 'information':
+            msg_box.setIcon(QMessageBox.Information)
+        elif msg_type == 'warning':
+            msg_box.setIcon(QMessageBox.Warning)
+        elif msg_type == 'critical':
+            msg_box.setIcon(QMessageBox.Critical)
+        elif msg_type == 'question':
+            msg_box.setIcon(QMessageBox.Question)
+        
+        msg_box.exec_()
+
     def browse_images(self):
         files, _ = QFileDialog.getOpenFileNames(self, 'Select Images', '', 'Image Files (*.jpg *.jpeg *.png)')
         if files:
-            try:
-                self.images_path_edit.setText(';'.join(files))
-                self.display_exif_info(files[0])
-                self.display_selected_image(files[0])  # 显示选定的图片
-                manufacturer = self.get_manufacturer(files[0])
-                logo_path = self.find_logo(manufacturer)
+            self.images_path_edit.setText(';'.join(files))
+            if get_manufacturer(files[0]) is not None:
+                manufacturer = get_manufacturer(files[0])
+                logo_path = find_logo(manufacturer)
                 if logo_path:
                     self.logo_path_edit.setText(logo_path)
-            except Exception as e:
-                QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
+            else :
+                self.show_message_box(self.translations[self.current_language]['no_device_title'], 
+                                      self.translations[self.current_language]['no_device'], 
+                                      'critical')
+                # return
+            
+            self.display_exif_info(files[0])
+            self.display_selected_image(files[0])  # 显示选定的图片
+
 
     def display_selected_image(self, image_path):
         image = Image.open(image_path)
@@ -198,64 +280,40 @@ class ImageWatermarkApp(QtWidgets.QWidget):
         output_dir = self.output_dir_edit.text()
 
         if not images_paths or not logo_path or not output_dir:
-            QMessageBox.warning(self, 'Input Error', 'Please provide all paths.')
+            self.show_message_box(self.translations[self.current_language]['input_error'], 
+                                  self.translations[self.current_language]['invalid_path'], 
+                                  'critical')
             return
 
-        logo_folder_path = "./logos"
-        try:
-            for image_path in images_paths:
-                base_name = os.path.basename(image_path)
-                name, ext = os.path.splitext(base_name)
-                output_path = os.path.join(output_dir, f"{name}_watermark{ext}")
-                manufacturer = self.get_manufacturer(image_path)
-                logo_path = self.find_logo(manufacturer)
-                add_borders_logo_and_text(image_path, logo_path, output_path)
-            QMessageBox.information(self, 'Success', 'Images processed successfully!')
-        except Exception as e:
-            QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
+        for image_path in images_paths:
+            base_name = os.path.basename(image_path)
+            name, ext = os.path.splitext(base_name)
+            output_path = os.path.join(output_dir, f"{name}_watermark{ext}")
+            
+            manufacturer = get_manufacturer(image_path)
+            if manufacturer is not None:
+                logo_path = find_logo(manufacturer)
+            res = add_borders_logo_and_text(image_path, logo_path, output_path)
+            if res is None:
+                return
+        self.show_message_box(self.translations[self.current_language]['success_title'], 
+                              self.translations[self.current_language]['success'], 
+                              'information')
 
     def preview(self):
         images_paths = self.images_path_edit.text().split(';')
         logo_path = self.logo_path_edit.text()
 
         if not images_paths or not logo_path:
-            QMessageBox.warning(self, 'Input Error', 'Please provide images and logo path for preview.')
+            self.show_message_box(self.translations[self.current_language]['error_title'], 
+                                  self.translations[self.current_language]['logo_error'], 
+                                  'critical')
             return
 
-        try:
-            preview_image_path = images_paths[0]
-            preview_image = add_borders_logo_and_text(preview_image_path, logo_path, preview=True)
-            # preview_image.show()
+        preview_image_path = images_paths[0]
+        preview_image = add_borders_logo_and_text(preview_image_path, logo_path, preview=True)
+        if preview_image is not None:
             self.display_preview(preview_image)
-        except Exception as e:
-            QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
-
-    def get_manufacturer(self, image_path):
-        try:
-            image = Image.open(image_path)
-            image = reset_image_orientation(image)
-            exif_dict = piexif.load(image.info['exif'])
-            manufacturer = exif_dict['0th'].get(piexif.ImageIFD.Make, b"").decode().strip()
-            for letter in manufacturer:
-                if letter in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ':
-                    continue
-                else:
-                    manufacturer = manufacturer.replace(letter, '')
-            return manufacturer
-        except Exception as e:
-            print(f"Error getting manufacturer: {e}")
-            return ""
-
-    def find_logo(self, manufacturer):
-        logo_dir = "./logos"
-        if not os.path.isdir(logo_dir):
-            logo_dir = "D:/摄影/tool/auto_watermark/logos"  # 替换为你的logo文件夹路径
-        for root, dirs, files in os.walk(logo_dir):
-            for file in files:
-                if file.lower().startswith(manufacturer.lower().split()[0]) \
-                        or manufacturer.lower().startswith(file.lower().split('.')[0]):
-                    return os.path.join(root, file)
-        return None
 
     def display_preview(self, image):
         qt_image = pil_image_to_qimage(image)
@@ -276,163 +334,32 @@ class ImageWatermarkApp(QtWidgets.QWidget):
                 item.setTextAlignment(QtCore.Qt.AlignCenter)  # 设置单元格内容居中
 
         except Exception as e:
-            self.exif_info_table.setItem(0, 0, QTableWidgetItem(f"Error: {e}"))
-            self.exif_info_table.setItem(0, 1, QTableWidgetItem(""))
-            self.exif_info_table.setItem(0, 2, QTableWidgetItem(""))
-            self.exif_info_table.setItem(0, 3, QTableWidgetItem(""))
-
-def pil_image_to_qimage(pil_image):
-    """
-    将PIL Image转换为QImage
-    :param pil_image: PIL Image对象
-    :return: QImage对象
-    """
-    # 将PIL图像转换为RGB格式，如果已经是RGB，这步骤不会改变图像
-    pil_image = pil_image.convert("RGB")
-
-    # 将PIL图像数据转换为字节串
-    image_data = pil_image.tobytes()
-
-    # 创建QImage对象
-    qimage = QImage(image_data, pil_image.width, pil_image.height, QImage.Format_RGB888)
-
-    # 返回转换后的QImage对象
-    return qimage
-
-def reset_image_orientation(image):
-    try:
-        exif = image._getexif()
-        if exif:
-            orientation = exif.get(274)
-            if orientation == 3:
-                image = image.rotate(180, expand=True)
-            elif orientation == 6:
-                image = image.rotate(270, expand=True)
-            elif orientation == 8:
-                image = image.rotate(90, expand=True)
-    except Exception as e:
-        print(f"Error resetting orientation: {e}")
-    return image
-
-def get_exif_table(image_path):
-    image = Image.open(image_path)
-    image = reset_image_orientation(image)  # Reset orientation
-
-    exif_dict = piexif.load(image.info['exif'])
-    exif_data = exif_dict['Exif']
-
-    focal_length_35 = exif_data.get(piexif.ExifIFD.FocalLengthIn35mmFilm, (0, 1))
-    focal_length = exif_data.get(piexif.ExifIFD.FocalLength, (0, 1))
-    f_number = exif_data.get(piexif.ExifIFD.FNumber, (0, 1))
-    exposure_time = exif_data.get(piexif.ExifIFD.ExposureTime, (0, 1))
-    iso_speed = exif_data.get(piexif.ExifIFD.ISOSpeedRatings, 0)
-
-    # focal_length_value = focal_length[0] / focal_length[1] if focal_length[1] != 0 else 0 # 实际焦距
-
-    focal_length_value = focal_length_35 # 35mm 焦距
-    f_number_value = f_number[0] / f_number[1] if f_number[1] != 0 else 0
-    exposure_time_value = exposure_time[0] / exposure_time[1] if exposure_time[1] != 0 else 0
-
-    return focal_length_value, f_number_value, exposure_time_value, iso_speed
-
-def get_exif_data(image_path):
-    dji_models = {
-        'FC8482': 'DJI Mini 4 Pro',
-        'FC7703': 'DJI Mini 2 SE'
-    }
-
-    image = Image.open(image_path)
-    image = reset_image_orientation(image)  # Reset orientation
-
-    exif_dict = piexif.load(image.info['exif'])
-    exif_data = exif_dict['Exif']
-
-
-    lens_info = exif_data.get(piexif.ExifIFD.LensModel, b"Unknown Lens").decode()
-    camera_make = exif_dict['0th'].get(piexif.ImageIFD.Make, b"Unknown Make").decode()
-    camera_model_code = exif_dict['0th'].get(piexif.ImageIFD.Model, b"Unknown Model").decode()
-
-    for letter in camera_make:
-        if letter in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ':
-            continue
-        else:
-            camera_make = camera_make.replace(letter, '')
-
-    for letter in camera_model_code:
-        if letter in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890- ':
-            continue
-        else:
-            camera_model_code = camera_model_code.replace(letter, '')
-
-    focal_length = exif_data.get(piexif.ExifIFD.FocalLength, (0, 1))
-    focal_length_35 = exif_data.get(piexif.ExifIFD.FocalLengthIn35mmFilm, (0, 1))
-    f_number = exif_data.get(piexif.ExifIFD.FNumber, (0, 1))
-    exposure_time = exif_data.get(piexif.ExifIFD.ExposureTime, (0, 1))
-    iso_speed = exif_data.get(piexif.ExifIFD.ISOSpeedRatings, 0)
-    datetime = exif_data.get(piexif.ExifIFD.DateTimeOriginal, b"Unknown Date").decode()
-
-    if camera_make.lower() == "dji":  # DJI 相机
-        lens_info = "DJI"
-        camera_model = dji_models.get(camera_model_code)
-        print("camera_model get = " + str(camera_model))
-    else:
-        camera_model = camera_model_code
-    if ' ' in datetime:
-        index = datetime.index(' ')  # 找到空格的索引位置
-        substring = datetime[:index]  # 提取空格前的部分
-        if ":" in substring:
-            new_substring = substring.replace(':', '-')  # 替换冒号为连字符
-            datetime = datetime[:index].replace(substring, new_substring) + datetime[index:]
-
-    if "T" in datetime:
-        print("t in datetime")
-        datetime = datetime.replace("T", " ")
-        print(datetime)
-        index = datetime.index(" ")  # 找到空格的索引位置
-        substring = datetime[:index]  # 提取空格前的部分
-        if ":" in substring:
-            new_substring = substring.replace(':', '-')  # 替换冒号为连字符
-            datetime = datetime[:index].replace(substring, new_substring) + datetime[index:]
-
-    if str(lens_info) == "Unknown Lens":
-        # 定义要尝试的ID列表
-        exif_ids = ["-LensModel", "-Lens", "-LensType"]
-        # 初始化镜头信息为空
-        lens_info = "Unknown Lens"
-        exif_tool_path = "./exiftool/exiftool.exe"
-        for exif_id in exif_ids:
-            output = subprocess.check_output([exif_tool_path, exif_id, image_path])
-            output = output.decode().strip().split(":")
-            if len(output) > 1:
-                lens_info = output[1].strip()
-                break
-        if "Asph" in lens_info:
-            index = lens_info.find("Asph")
-
-            if index != -1:
-                # 删除 "Asph" 开头的固定长度部分
-                lens_info = lens_info[:index].strip()
-
-        print("Modified Lens Info:", lens_info)
-
-        print("Lens Info:", lens_info)
-
-    # focal_length_value = focal_length[0] / focal_length[1] # 实际焦距
-    focal_length_value = focal_length_35 # 35mm焦距
-    f_number_value = f_number[0] / f_number[1]
-    exposure_time_value = exposure_time[0] / exposure_time[1]
-
-    camera_info = f"{lens_info}\n{camera_model}"
-    shooting_info = f"{focal_length_value}mm f/{f_number_value} 1/{int(1 / exposure_time_value)}s ISO{iso_speed}\n{datetime}"
-
-    return camera_info, shooting_info
+            self.show_message_box(self.translations[self.current_language]['error_title'], 
+                                  self.translations[self.current_language]['exif_error'],
+                                  'critical')
+            return None
 
 def add_borders_logo_and_text(image_path, logo_path, output_path = None, preview = False):
     # Todo: Add more selections
     image = Image.open(image_path)
     image = reset_image_orientation(image)  # Reset orientation
+    exif_dict = None
+    exif_bytes = None
+    app_instance = ImageWatermarkApp()
+    
+    try:
+        exif_dict = piexif.load(image.info.get('exif', b''))
+        exif_bytes = piexif.dump(exif_dict)
+    except Exception as e:
+        app_instance.show_message_box(
+                              app_instance.translations[app_instance.current_language]['error_title'], 
+                              app_instance.translations[app_instance.current_language]['exif_error'],
+                              'critical')
+        return None
 
-    camera_info, shooting_info = get_exif_data(image_path)
+    result = get_exif_data(image_path)
+    if result is not None:
+        camera_info, shooting_info = result
 
     border_size = EDGE_WIDTH
     border_size_side = EDGE_WIDTH_SIDE
@@ -449,40 +376,38 @@ def add_borders_logo_and_text(image_path, logo_path, output_path = None, preview
 
     draw = ImageDraw.Draw(new_image)
 
-    font_path_1 = "./fonts/AlibabaPuHuiTi-2-85-Bold.otf"
-    font_path_2 = "./fonts/AlibabaPuHuiTi-2-45-Light.otf"
-    font1 = ImageFont.truetype(font_path_1, 90)
-    font2 = ImageFont.truetype(font_path_2, 90)
+    font_bold = ImageFont.truetype(GLOBAL_FONT_PATH_BOLD, 100)
+    font_light = ImageFont.truetype(GLOBAL_FONT_PATH_LIGHT, 100)
 
     camera_info_lines = camera_info.split('\n')
     shooting_info_lines = shooting_info.split('\n')
 
-    shooting_info_bbox = draw.textbbox((0, 0), shooting_info, font=font1)
+    shooting_info_bbox = draw.textbbox((0, 0), shooting_info, font=font_bold)
 
-    text_y = new_height - 1.5 * border_size + 40
-    draw.text((border_size, text_y), camera_info_lines[0], font=font1, fill=(0, 0, 0))
-    draw.text((border_size, text_y + 120), camera_info_lines[1], font=font2, fill=(0, 0, 0))
+    text_y = new_height - 1.5 * border_size + 120
+    draw.text((border_size, text_y), camera_info_lines[0], font=font_bold, fill=(0, 0, 0))
+    draw.text((border_size, text_y + 120), camera_info_lines[1], font=font_light, fill=(0, 0, 0))
 
     shooting_info_width = shooting_info_bbox[2] - shooting_info_bbox[0]
-    draw.text((new_width - border_size - shooting_info_width, text_y), shooting_info_lines[0], font=font1, fill=(0, 0, 0))
-    draw.text((new_width - border_size - shooting_info_width, text_y + 120), shooting_info_lines[1], font=font2, fill=(0, 0, 0))
+    draw.text((new_width - border_size - shooting_info_width, text_y), shooting_info_lines[0], font=font_bold, fill=(0, 0, 0))
+    draw.text((new_width - border_size - shooting_info_width, text_y + 120), shooting_info_lines[1], font=font_light, fill=(0, 0, 0))
 
     new_image.paste(logo,
                     (new_width - border_size - shooting_info_width - logo.size[0] - 200,
-                     int(new_height - 1.5 * border_size + int(logo.size[1] / 4))),
+                     int(new_height - 1.5 * border_size + 80 + int(logo.size[1] / 4))),
                     logo)
 
     draw.line((new_width - border_size - shooting_info_width - 100,
-               int(new_height - 1.5 * border_size + int(logo.size[1] / 4) - 10),
+               int(new_height - 1.5 * border_size + 80 + int(logo.size[1] / 4) - 10),
                new_width - border_size - shooting_info_width - 100,
-               int(new_height - 1.5 * border_size + int(logo.size[1] / 4) + 10 + logo.size[1])),
+               int(new_height - 1.5 * border_size + 80 + int(logo.size[1] / 4) + 10 + logo.size[1])),
               fill=(0, 0, 0),
               width=2)
 
     if preview:
         return new_image
     else:
-        new_image.save(output_path)
+        new_image.save(output_path, exif=exif_bytes)  # 保留exif数据
 
 if __name__ == '__main__':
     import sys
