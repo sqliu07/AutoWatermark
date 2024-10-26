@@ -1,3 +1,4 @@
 imgs/
 venv/
 .vscode/
+__pycache__/
