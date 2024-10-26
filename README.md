@@ -1,7 +1,7 @@
 English | [Chinese (Simplified)](./README.sc.md)
 # AutoWatermark
 ## About
-AutoWatermark is a software that automatically adds watermarks to your photos taken with DSLR cameras, including exif information such as model number, lens information, focal length, aperture, etc.
+AutoWatermark is a software that automatically adds watermarks to your photos taken with DSLR/MILC cameras, the content of which incluing model number, lens information and exif information such as focal length, aperture, etc.
 ## Usage
 The software is currently available for Windows, yet Linux and MacOS are **not yet** tested.
 First install requirements:
